@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Word Guessing Game</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      color: white;
+      text-align: center;
+      padding: 40px;
+    }
+    .container {
+      background: white;
+      color: #333;
+      padding: 30px;
+      border-radius: 15px;
+      width: 90%;
+      max-width: 600px;
+      margin: auto;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    .info {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .hangman {
+      height: 150px;
+      margin-bottom: 20px;
+    }
+    .word {
+      font-size: 30px;
+      letter-spacing: 15px;
+      margin: 20px 0;
+      color: #222;
+    }
+    .category {
+      font-style: italic;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .letters {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .letter {
+      background: #d3e3fc;
+      color: #333;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 50%;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .letter.correct {
+      background-color: #a4dfab;
+    }
+    .letter.wrong {
+      background-color: #f88b8b;
+    }
+    .letter:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .wrong-letters {
+      color: red;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Word Guessing Game</h1>
+  <div class="info">
+    <div>Lives: <span id="lives">5</span></div>
+    <div>Score: <span id="score">0</span></div>
+  </div>
+
+  <div class="container">
+    <canvas id="hangmanCanvas" class="hangman" width="200" height="150"></canvas>
+    
+    <div class="word" id="wordDisplay">_ _ _ _ _</div>
+    <div class="category" id="category">Category: Sports</div>
+
+    <div class="letters" id="letters"></div>
+    <div class="wrong-letters" id="wrongLetters">Wrong Letters: </div>
+  </div>
+
+  <script>
+    const words = [
+      { word: "BASKETBALL", category: "Sports" },
+      { word: "ELEPHANT", category: "Animal" },
+      { word: "LAPTOP", category: "Electronics" },
+      { word: "JAVASCRIPT", category: "Programming" },
+      { word: "INDIA", category: "Country" }
+    ];
+
+    let selected = words[Math.floor(Math.random() * words.length)];
+    let word = selected.word;
+    let category = selected.category;
+    let displayWord = Array(word.length).fill("_");
+    let lives = 5;
+    let score = 0;
+    let wrongLetters = [];
+
+    const wordDisplay = document.getElementById("wordDisplay");
+    const categoryDisplay = document.getElementById("category");
+    const lettersContainer = document.getElementById("letters");
+    const wrongLettersDisplay = document.getElementById("wrongLetters");
+    const livesDisplay = document.getElementById("lives");
+    const scoreDisplay = document.getElementById("score");
+    const canvas = document.getElementById("hangmanCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Draw gallows
+    function drawGallows() {
+      ctx.strokeStyle = "#5d4037";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(10, 140);
+      ctx.lineTo(100, 140);
+      ctx.moveTo(50, 140);
+      ctx.lineTo(50, 10);
+      ctx.lineTo(120, 10);
+      ctx.lineTo(120, 30);
+      ctx.stroke();
+    }
+
+    // Draw hangman body parts
+    function drawHangman(errors) {
+      ctx.strokeStyle = "#333";
+      ctx.lineWidth = 3;
+      switch (errors) {
+        case 1:
+          // head
+          ctx.beginPath();
+          ctx.arc(120, 40, 10, 0, Math.PI * 2);
+          ctx.stroke();
+          break;
+        case 2:
+          // body
+          ctx.beginPath();
+          ctx.moveTo(120, 50);
+          ctx.lineTo(120, 90);
+          ctx.stroke();
+          break;
+        case 3:
+          // left arm
+          ctx.beginPath();
+          ctx.moveTo(120, 60);
+          ctx.lineTo(100, 75);
+          ctx.stroke();
+          break;
+        case 4:
+          // right arm
+          ctx.beginPath();
+          ctx.moveTo(120, 60);
+          ctx.lineTo(140, 75);
+          ctx.stroke();
+          break;
+        case 5:
+          // left leg
+          ctx.beginPath();
+          ctx.moveTo(120, 90);
+          ctx.lineTo(100, 120);
+          ctx.stroke();
+          break;
+        case 6:
+          // right leg
+          ctx.beginPath();
+          ctx.moveTo(120, 90);
+          ctx.lineTo(140, 120);
+          ctx.stroke();
+          break;
+      }
+    }
+
+    // Update displays
+    function updateDisplay() {
+      wordDisplay.innerText = displayWord.join(" ");
+      livesDisplay.innerText = lives;
+      scoreDisplay.innerText = score;
+      wrongLettersDisplay.innerText = `Wrong Letters: ${wrongLetters.join(", ")}`;
+    }
+
+    // Handle guess
+    function handleGuess(letterBtn, letter) {
+      letterBtn.disabled = true;
+      if (word.includes(letter)) {
+        letterBtn.classList.add("correct");
+        for (let i = 0; i < word.length; i++) {
+          if (word[i] === letter) {
+            displayWord[i] = letter;
+          }
+        }
+        score += 10;
+      } else {
+        letterBtn.classList.add("wrong");
+        if (!wrongLetters.includes(letter)) {
+          wrongLetters.push(letter);
+          drawHangman(wrongLetters.length);
+          lives--;
+        }
+      }
+
+      updateDisplay();
+      checkEnd();
+    }
+
+    // Game over or win check
+    function checkEnd() {
+      if (!displayWord.includes("_")) {
+        setTimeout(() => alert("🎉 You Win!"), 200);
+        disableAll();
+      } else if (lives === 0) {
+        setTimeout(() => alert(`💀 Game Over! Word was: ${word}`), 200);
+        disableAll();
+      }
+    }
+
+    // Disable all letter buttons
+    function disableAll() {
+      const buttons = document.querySelectorAll(".letter");
+      buttons.forEach(btn => btn.disabled = true);
+    }
+
+    // Create buttons
+    function createLetterButtons() {
+      for (let i = 65; i <= 90; i++) {
+        const letter = String.fromCharCode(i);
+        const button = document.createElement("button");
+        button.innerText = letter;
+        button.classList.add("letter");
+        button.onclick = () => handleGuess(button, letter);
+        lettersContainer.appendChild(button);
+      }
+    }
+
+    // Init game
+    function initGame() {
+      drawGallows();
+      categoryDisplay.innerText = `Category: ${category}`;
+      updateDisplay();
+      createLetterButtons();
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
